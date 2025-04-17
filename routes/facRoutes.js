@@ -3,7 +3,7 @@ const router = express.Router();
 const {
     getFac,
     getFacById
-} = require('../controllers/userControllers.js');
+} = require('../controllers/facControllers.js');
 
 router.get('/', getFac);
 router.get('/:id', getFacById);
