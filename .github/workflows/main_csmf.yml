@@ -32,6 +32,11 @@ jobs:
           cp -r controllers/ deploy/    # if you use controllers
           cp package.json package-lock.json deploy/
 
+      - name: Install dependencies in deploy folder
+        run: |
+          cd deploy
+          npm install --omit=dev
+
       - name: Zip artifact for deployment
         run: |
           cd deploy
