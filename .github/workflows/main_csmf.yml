@@ -29,7 +29,7 @@ jobs:
           cp index.js deploy/
           cp -r routes/ deploy/         # If you use a routes folder
           cp -r controllers/ deploy/    # If you use controllers
-          cp -r db/ deploy/             # DB connection logic if needed
+          cp -r db.js/ deploy/             # DB connection logic if needed
           cp package.json package-lock.json deploy/
 
       - name: Zip artifact for deployment
