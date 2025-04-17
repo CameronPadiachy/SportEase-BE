@@ -1,16 +1,67 @@
-name: Deploy Node.js to Azure
+name: Build and deploy Node.js app to Azure Web App - CSMF
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-    environment: Production
+    permissions:
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22.x'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Prepare clean deploy folder
+        run: |
+          mkdir deploy
+          cp index.js deploy/
+          cp db.js deploy/
+          cp -r routes/ deploy/
+          cp -r controllers/ deploy/
+          cp package.json package-lock.json deploy/
+
+      - name: Zip artifact for deployment
+        run: |
+          cd deploy
+          zip -r ../release.zip . -x "node_modules/*"
+          cd ..
+
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v4
+        with:
+          name: node-app
+          path: release.zip
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: 'Production'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: node-app
+
+      - name: Unzip artifact for deployment
+        run: unzip release.zip -d deploy
 
       - name: Login to Azure
         uses: azure/login@v2
@@ -19,8 +70,10 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_44D54444047B48A1A77603A311139408 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A4CCD5D195094017B34693617226C854 }}
 
-      - name: Deploy to Web App
+      - name: Deploy to Azure Web App
+        id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'CSMF'
-          package: .
+          slot-name: 'Production'
+          package: deploy
