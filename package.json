@@ -19,6 +19,7 @@
     "mssql": "^11.0.1"
   },
   "devDependencies": {
+    "mssql": "^11.0.1",
     "nodemon": "^3.1.9"
   }
 }
