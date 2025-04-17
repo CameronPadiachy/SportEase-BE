@@ -7,15 +7,20 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: Production
     permissions:
-      id-token: write
+      contents: read  # Required for private repos
+      id-token: write  # Required for Azure login
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}  # Essential for private repos
 
-      - name: Install mssql (and other deps)
-        run: npm install mssql  # Explicitly installs the missing module
+      - name: Install dependencies
+        run: |
+          npm install
+          npm install mssql  # Explicitly install missing module
 
       - name: Login to Azure
         uses: azure/login@v2
@@ -28,4 +33,4 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'CSMF'
-          package: .  # Deploys the entire repo (with node_modules)
+          package: .
