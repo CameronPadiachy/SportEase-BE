@@ -27,9 +27,9 @@ jobs:
         run: |
           mkdir deploy
           cp index.js deploy/
-          cp -r routes/ deploy/         # If you use a routes folder
-          cp -r controllers/ deploy/    # If you use controllers
-          cp -r db.js/ deploy/             # DB connection logic if needed
+          cp db.js deploy/
+          cp -r routes/ deploy/         # if you use a routes folder
+          cp -r controllers/ deploy/    # if you use controllers
           cp package.json package-lock.json deploy/
 
       - name: Zip artifact for deployment
