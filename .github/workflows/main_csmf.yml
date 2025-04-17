@@ -20,22 +20,20 @@ jobs:
         with:
           node-version: '22.x'
 
-      - name: Install dependencies
-        run: npm install
-
-      - name: Prepare clean deploy folder
+      - name: Prepare deploy folder with fresh dependencies
         run: |
           mkdir deploy
-          cp index.js deploy/
-          cp db.js deploy/
-          cp -r routes/ deploy/
-          cp -r controllers/ deploy/
-          cp package.json package-lock.json deploy/
+          # Copy only necessary files (exclude node_modules)
+          cp -r controllers routes db.js index.js package.json package-lock.json deploy/
+          # Install production dependencies in deploy folder
+          cd deploy
+          npm ci --production
+          cd ..
 
       - name: Zip artifact for deployment
         run: |
           cd deploy
-          zip -r ../release.zip . -x "node_modules/*"
+          zip -r ../release.zip .
           cd ..
 
       - name: Upload artifact for deployment job
