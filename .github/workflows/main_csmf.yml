@@ -1,37 +1,27 @@
-name: Build and deploy Node.js app to Azure Web App - CSMF
+name: Deploy Node.js to Azure
 
 on:
   push:
-    branches:
-      - main
-  workflow_dispatch:
+    branches: [main]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment:
-      name: 'Production'
-      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+    environment: Production
 
     steps:
-      - uses: actions/checkout@v4  # Check out your repository code
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '22.x'
+      - uses: actions/checkout@v4
 
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_6D43FE9820464A3081163C20D318D4B2 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_44D54444047B48A1A77603A311139408 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A4CCD5D195094017B34693617226C854 }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Deploy to Azure Web App
-        id: deploy-to-webapp
+      - name: Deploy to Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'CSMF'
-          slot-name: 'Production'
-          package: .  # Deploy the entire repo (let Azure Oryx handle npm install)
+          package: .
