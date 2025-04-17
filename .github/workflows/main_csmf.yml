@@ -28,19 +28,14 @@ jobs:
           mkdir deploy
           cp index.js deploy/
           cp db.js deploy/
-          cp -r routes/ deploy/         # if you use a routes folder
-          cp -r controllers/ deploy/    # if you use controllers
+          cp -r routes/ deploy/
+          cp -r controllers/ deploy/
           cp package.json package-lock.json deploy/
-
-      - name: Install dependencies in deploy folder
-        run: |
-          cd deploy
-          npm install --omit=dev
 
       - name: Zip artifact for deployment
         run: |
           cd deploy
-          zip -r ../release.zip .
+          zip -r ../release.zip . -x "node_modules/*"
           cd ..
 
       - name: Upload artifact for deployment job
