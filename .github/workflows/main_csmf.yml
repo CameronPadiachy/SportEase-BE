@@ -8,12 +8,11 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    environment:  # <-- Add this environment section
+    environment: 
       name: 'Production'
-      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}  # Optional: Only needed if you want to reference the URL later
     permissions:
       contents: read
-      id-token: write  # Required for OIDC auth
+      id-token: write
 
     steps:
       - uses: actions/checkout@v4
@@ -25,11 +24,18 @@ jobs:
 
       - name: Prepare deploy folder with dependencies
         run: |
-          mkdir deploy
+          mkdir -p deploy
           cp index.js db.js package.json package-lock.json deploy/
           cp -r routes controllers deploy/
           cd deploy
           npm ci --production
+          cd ..
+          ls -la deploy/  # Debug
+
+      - name: Create deployment package
+        run: |
+          cd deploy
+          zip -r ../deploy.zip .
           cd ..
 
       - name: Login to Azure
@@ -40,9 +46,8 @@ jobs:
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A4CCD5D195094017B34693617226C854 }}
 
       - name: Deploy to Azure
-        id: deploy-to-webapp  # <-- Add this ID if you want to reference outputs
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'CSMF'
           slot-name: 'Production'
-          package: deploy
+          package: deploy.zip
