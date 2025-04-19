@@ -102,7 +102,7 @@ exports.updateBooking = async (req, res) => {
 
         await request.query(query);
 
-        res.status(200).json({ message: 'Booking updated successfully' });
+        res.status(200).json({ booking_id : id , status : updates.status});
 
     } catch (err) {
         console.error('SQL error: ', err);
