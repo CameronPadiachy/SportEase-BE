@@ -4,7 +4,6 @@ const facRoutes = require('./routes/facRoutes');
 const bookingRoutes =  require('./routes/bookingRoutes');
 
 const app = express();
-const port = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(express.json());
