@@ -3,6 +3,8 @@ const cors = require('cors');
 const notificationRoutes=require('./routes/notificationRoutes');
 const facRoutes = require('./routes/facRoutes');
 const bookingRoutes =  require('./routes/bookingRoutes');
+const userRoutes = require('./routes/userRoutes');
+const eventsRoutes = require('./routes/eventsRoutes');
 require('dotenv').config();
 
 const app = express();
@@ -14,6 +16,8 @@ app.use(express.json());
 app.use('/api/fac', facRoutes);
 app.use('/api/notif',notificationRoutes);
 app.use('/api/booking', bookingRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/event', eventsRoutes);
 
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
