@@ -1,12 +1,11 @@
-const { sql, poolPromise } = require('../db');
+const pool = require('../db'); // Your new PostgreSQL pool
 
 exports.getAllBookings = async (req, res) => {
     try {
-        const pool = await poolPromise;
-        const result = await pool.request().query('SELECT * FROM Bookings');
-        res.status(200).json(result.recordset);
+        const { rows } = await pool.query('SELECT * FROM Bookings');
+        res.status(200).json(rows); // Note: 'rows' instead of 'recordset'
     } catch (err) {
-        console.error('SQL error: ', err);
+        console.error('PostgreSQL error: ', err);
         res.status(500).json({ error: 'Internal server error.' });
     }
 };

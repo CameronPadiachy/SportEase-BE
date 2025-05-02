@@ -17,7 +17,8 @@
     "csfm-be": "file:",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
-    "mssql": "^11.0.1"
+    "mssql": "^11.0.1",
+    "pg": "^8.15.6"
   },
   "devDependencies": {
     "jest": "^29.7.0",

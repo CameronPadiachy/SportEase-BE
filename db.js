@@ -1,24 +1,18 @@
-const sql = require('mssql');
+const { Pool } = require('pg');
 require('dotenv').config();
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 const config = {
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    server: "devdaddies.database.windows.net",
-    database: process.env.DB_DATABASE,
-    options: {
-      encrypt: process.env.DB_ENCRYPT === 'true',
-      trustServerCertificate: false
-    }
+  connectionString: process.env.DB_CONNECTION_STRING,
+  ssl: isProduction ? { rejectUnauthorized: true } : false
 };
 
-const poolPromise = new sql.ConnectionPool(config)
-    .connect()
-    .then(pool =>{
-        console.log('Connected to Azure Sql DB');
-        return pool;
-    })
-    .catch(err => console.error('Database connection failed:', err));
+const pool = new Pool(config);
 
-module.exports = {sql, poolPromise };
+// Test connection immediately
+pool.query('SELECT NOW()')
+  .then(res => console.log('🎉 Connected to Supabase at:', res.rows[0].now))
+  .catch(err => console.error('❌ Connection failed:', err.message));
 
+module.exports = pool;
