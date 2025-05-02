@@ -72,7 +72,7 @@ describe('Booking API tests', () => {
       
       // Mock the insert response
       mockRequest.query.mockResolvedValueOnce({ 
-        recordset: [{ booking_id: 123 }] 
+        recordset: [{ booking_id: 1 }] 
       });
       
       const res = await request(app)
@@ -86,7 +86,7 @@ describe('Booking API tests', () => {
       expect(res.statusCode).toBe(201);
       expect(res.body).toEqual({
         message: 'Booking successfully created',
-        booking_id: 123
+        booking_id: 1
       });
       
       // Verify the overlap check query
@@ -185,19 +185,26 @@ describe('Booking API tests', () => {
 
   describe('Patch requests:', () => {
     it('Updates a booking successfully', async () => {
+      // Mock the booking existence check
+      mockRequest.query.mockResolvedValueOnce({ recordset: [{}] });
+    
       // Mock the update query
       mockRequest.query.mockResolvedValueOnce({ rowsAffected: [1] });
-      
+    
       const res = await request(app)
         .patch('/api/booking/1')
         .send({ status: 'approved' });
-      
+    
       expect(res.statusCode).toBe(200);
       expect(res.body).toEqual({
         booking_id: "1",
         status: 'approved'
       });
+    
+      // Optional: check that correct queries were called
+      expect(mockRequest.query).toHaveBeenNthCalledWith(1, 'SELECT 1 FROM Bookings WHERE booking_id = @id');
     });
+    
 
     it('Fails to update with no fields', async () => {
       const res = await request(app)
