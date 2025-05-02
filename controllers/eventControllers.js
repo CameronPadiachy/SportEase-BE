@@ -1,85 +1,92 @@
-const { sql, poolPromise } = require('../db');
+const pool = require('../db');
 
-exports.makeEvent =  async (req, res)=>{
-    try{
-        const pool = await poolPromise;
-        const{ title, desc, date, fac_id, max_p, curr_p } = req.body;
-        const result = await pool.request()
-            .input('title', title)
-            .input('description', desc)
-            .input('date', sql.DateTime, date)
-            .input('facility_id', fac_id)
-            .input('max_participants', sql.Int, max_p)
-            .input('current_participants', sql.Int, curr_p)
-            .query('INSERT INTO Events (title, description, date, facility_id, max_participants, current_participants) VALUES (@title, @desc, @date, @fac_id, @max_p, @curr_p);');
-        res.status(201).json({message : 'Event created succesfully', res : result});
-    }catch(err){
-        console.error('SQL error: ', err);
-        res.status(500).json({error : 'Internal server error.'});
+exports.makeEvent = async (req, res) => {
+    try {
+        const { title, desc, date, fac_id, max_p, curr_p } = req.body;
+        const result = await pool.query(
+            `INSERT INTO events 
+             (title, description, date, facility_id, max_p, curr_p) 
+             VALUES ($1, $2, $3, $4, $5, $6) 
+             RETURNING *`,
+            [title, desc, date, fac_id, max_p, curr_p]
+        );
+        
+        res.status(201).json({
+            message: 'Event created successfully', 
+            res: result.rows[0]
+        });
+    } catch(err) {
+        console.error('Database error:', err);
+        res.status(500).json({ error: 'Internal server error.' });
     }
 };
 
-exports.updateEvent = async (req,res) =>{
+exports.updateEvent = async (req, res) => {
     try {
-        const pool = await poolPromise;
         const { id } = req.params;
         const updates = req.body;
 
-        // Validate if there's something to update
         if (!updates || Object.keys(updates).length === 0) {
             return res.status(400).json({ error: 'No fields provided to update' });
         }
 
         // Build SET clause dynamically
         const setClauses = [];
-        const request = pool.request();
+        const values = [];
+        let paramIndex = 1;
 
-        Object.entries(updates).forEach(([key, value], index) => {
-            const paramName = `param${index}`;
-            setClauses.push(`${key} = @${paramName}`);
-            request.input(paramName, value); // let mssql auto-infer type
+        Object.entries(updates).forEach(([key, value]) => {
+            setClauses.push(`${key} = $${paramIndex}`);
+            values.push(value);
+            paramIndex++;
         });
 
-        request.input('id', sql.Int, id);
+        values.push(id); // Add ID as the last parameter
 
         const query = `
-            UPDATE Events
+            UPDATE events
             SET ${setClauses.join(', ')}
-            WHERE event_id = @id
+            WHERE event_id = $${paramIndex}
+            RETURNING *
         `;
 
-        await request.query(query);
+        const result = await pool.query(query, values);
 
-        res.status(200).json({ message: 'Event updated successfully' });
+        res.status(200).json({ 
+            message: 'Event updated successfully',
+            res: result.rows[0]
+        });
 
-    } catch (err) {
-        console.error('SQL error: ', err);
+    } catch(err) {
+        console.error('Database error:', err);
         res.status(500).json({ error: 'Internal server error' });
     }
 };
 
-exports.delEvent = async (req, res) =>{
-    try{
-        const pool = await poolPromise;
-        const{ id } = req.params;
-        const result = await pool.request()
-            .input('id', sql.Int, id)
-            .query('DELETE FROM Events WHERE event_id = @id');
-        res.status(200).json({message : 'Event deleted successfully', res: result});
-    }catch(err){
-        console.error('SQL error ', err);
-        res.status(500).json({message: 'Internal server error'});
+exports.delEvent = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await pool.query(
+            'DELETE FROM events WHERE event_id = $1 RETURNING *',
+            [id]
+        );
+        
+        res.status(200).json({
+            message: 'Event deleted successfully',
+            res: result.rows[0]
+        });
+    } catch(err) {
+        console.error('Database error:', err);
+        res.status(500).json({ message: 'Internal server error' });
     }
 };
 
 exports.getAllEvents = async (req, res) => {
-    try{
-        const pool = await poolPromise;
-        const result = await pool.request().query('SELECT * FROM Events');
-
-        res.status(200).json(result.recordset);
-    }catch(err){
-        console.error('SQL error: ', err);
-        res.status(500).json({error : 'Internal server error.'});
+    try {
+        const result = await pool.query('SELECT * FROM events');
+        res.status(200).json(result.rows);
+    } catch(err) {
+        console.error('Database error:', err);
+        res.status(500).json({ error: 'Internal server error.' });
     }
-}
+};
