@@ -1,25 +1,24 @@
-const dns = require('dns');
-dns.setDefaultResultOrder('ipv4first'); 
+// db.js
+import pkg from 'pg'
+const { Pool } = pkg
 
-const { Pool } = require('pg');
-require('dotenv').config();
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
+})
 
-const isProduction = process.env.NODE_ENV === 'production';
+// Test the connection
+async function testConnection() {
+  try {
+    await pool.query('SELECT NOW()')
+    console.log('✅ Connected to DB')
+  } catch (err) {
+    console.error('❌ Connection to DB failed:', err.message)
+  }
+}
 
-const config = {
-  host: process.env.DB_HOST,
-  port: Number(process.env.DB_PORT),
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  ssl: isProduction ? { rejectUnauthorized: false } : false,
-  family: 4 
-};
+testConnection()
 
-const pool = new Pool(config);
-
-pool.query('SELECT NOW()')
-  .then(res => console.log('🎉 Connected to Supabase at:', res.rows[0].now))
-  .catch(err => console.error('❌ Connection failed:', err.message));
-
-module.exports = pool;
+export default pool
