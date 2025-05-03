@@ -1,3 +1,6 @@
+const dns = require('dns');
+dns.setDefaultResultOrder('ipv4first'); 
+
 const { Pool } = require('pg');
 require('dotenv').config();
 
@@ -10,7 +13,7 @@ const config = {
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   ssl: isProduction ? { rejectUnauthorized: false } : false,
-  family: 4 // 👈 Force IPv4
+  family: 4 
 };
 
 const pool = new Pool(config);
