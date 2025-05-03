@@ -1,17 +1,41 @@
-const { sql, poolPromise } = require('../db');
+const  pool  = require('../db');
 
+// Get both personal and general notifications for a user
 exports.getNotificationsByUser = async (req, res) => {
+    const { userId } = req.params;
+
     try {
-        const pool = await poolPromise;
-        const { userId } = req.params;
+        const result = await pool.query(
+            `SELECT * FROM "notifications"
+             WHERE uid = $1 OR uid IS NULL
+             ORDER BY created_at DESC`,
+            [userId]
+        );
 
-        const result = await pool.request()
-            .input('userId', sql.VarChar(255), userId)
-            .query('SELECT * FROM Notifications WHERE user_id = @userId ORDER BY created_at DESC');
-
-        res.status(200).json(result.recordset);
+        res.status(200).json(result.rows);
     } catch (err) {
-        console.error('SQL error: ', err);
+        console.error('PostgreSQL error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+// Create a general announcement (no user_id)
+exports.createGeneralAnnouncement = async (req, res) => {
+    try {
+        const { message } = req.body;
+
+        if (!message) {
+            return res.status(400).json({ error: 'Message is required' });
+        }
+
+        await pool.query(
+            'INSERT INTO "Notifications" (user_id, message, created_at) VALUES (NULL, $1, NOW())',
+            [message]
+        );
+
+        res.status(201).json({ message: 'General announcement created' });
+    } catch (err) {
+        console.error('PostgreSQL error:', err);
         res.status(500).json({ error: 'Internal server error' });
     }
 };
