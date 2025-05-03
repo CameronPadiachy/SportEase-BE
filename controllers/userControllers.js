@@ -1,17 +1,30 @@
-const { sql, poolPromise } = require('../db');
+const pool = require('../db'); 
 
 exports.addUser = async (req, res) => {
     try {
-        const pool = await poolPromise;
-        const { uid } = req.body; // Destructure uid from body
+        const { uid } = req.body; 
 
-        const addU = await pool.request()
-            .input('uid', uid)
-            .query('INSERT INTO Users (user_id) Values (@uid);');
         
-        res.status(201).json({ message: 'User added successfully', uid });
+        const result = await pool.query(
+            'INSERT INTO users (uid) VALUES ($1) RETURNING *',
+            [uid]
+        );
+        
+        res.status(201).json({ 
+            message: 'User added successfully',
+            user: result.rows[0] // Returns the inserted record
+        });
     } catch (err) {
-        console.error('SQL error: ', err);
+        console.error('Database error:', err);
+        
+       
+        if (err.code === '23505') {
+            return res.status(409).json({ 
+                error: 'User already exists',
+                details: err.detail
+            });
+        }
+        
         res.status(500).json({ 
             error: 'Internal server error',
             details: err.message 
