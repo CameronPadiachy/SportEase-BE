@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 
-const{
+const {
     getAllBookings,
     getUnapprovedBookings,
     getBookingById,
@@ -13,6 +13,7 @@ const{
     rejectBooking,
 } =  require('../controllers/bookingControllers');
 
+// Booking routes
 router.get('/', getAllBookings);
 router.get('/una', getUnapprovedBookings);
 router.get('/:id', getBookingById);

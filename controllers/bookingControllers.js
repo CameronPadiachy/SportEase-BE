@@ -119,9 +119,9 @@ exports.delBooking = async (req, res) => {
     }
 };
 
+// PATCH update a booking
 exports.updateBooking = async (req, res) => {
     try {
-        const pool = await poolPromise;
         const { id } = req.params;
         const updates = req.body;
 
@@ -199,7 +199,7 @@ exports.approveBooking = async (req, res) => {
         res.status(200).json({ message: 'Booking approved and notification sent' });
 
     } catch (err) {
-        console.error('SQL error: ', err);
+        console.error('PostgreSQL error:', err);
         res.status(500).json({ error: 'Internal server error' });
     }
 };
