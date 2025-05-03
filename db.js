@@ -1,13 +1,11 @@
-// db.js
-import pkg from 'pg'
-const { Pool } = pkg
+const { Pool } = require('pg');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
     rejectUnauthorized: false
   }
-})
+});
 
 // Test the connection
 async function testConnection() {
@@ -19,6 +17,6 @@ async function testConnection() {
   }
 }
 
-testConnection()
+testConnection();
 
-export default pool
+module.exports = pool;
