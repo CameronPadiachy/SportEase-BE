@@ -5,12 +5,15 @@ const isProduction = process.env.NODE_ENV === 'production';
 
 const config = {
   connectionString: process.env.DB_CONNECTION_STRING,
-  ssl: isProduction ? { rejectUnauthorized: true } : false
+  ssl: {
+    rejectUnauthorized: false
+  },
+  family: 4 
 };
 
 const pool = new Pool(config);
 
-// Test connection immediately
+
 pool.query('SELECT NOW()')
   .then(res => console.log('🎉 Connected to Supabase at:', res.rows[0].now))
   .catch(err => console.error('❌ Connection failed:', err.message));
