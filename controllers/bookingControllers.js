@@ -1,9 +1,9 @@
-const pool = require('../db'); // PostgreSQL connection
+const pool = require('../db');
 
 // GET all bookings
 exports.getAllBookings = async (req, res) => {
     try {
-        const { rows } = await pool.query('SELECT * FROM "Bookings"');
+        const { rows } = await pool.query('SELECT * FROM bookings');
         res.status(200).json(rows);
     } catch (err) {
         console.error('PostgreSQL error:', err);
@@ -14,7 +14,7 @@ exports.getAllBookings = async (req, res) => {
 // GET all unapproved bookings
 exports.getUnapprovedBookings = async (req, res) => {
     try {
-        const { rows } = await pool.query('SELECT * FROM "Bookings" WHERE approved IS NULL');
+        const { rows } = await pool.query('SELECT * FROM bookings WHERE approved IS NULL');
         res.status(200).json(rows);
     } catch (err) {
         console.error('PostgreSQL error:', err);
@@ -26,7 +26,7 @@ exports.getUnapprovedBookings = async (req, res) => {
 exports.getBookingById = async (req, res) => {
     try {
         const { id } = req.params;
-        const { rows } = await pool.query('SELECT * FROM "Bookings" WHERE booking_id = $1', [id]);
+        const { rows } = await pool.query('SELECT * FROM bookings WHERE booking_id = $1', [id]);
         res.status(200).json(rows);
     } catch (err) {
         console.error('PostgreSQL error:', err);
@@ -37,14 +37,15 @@ exports.getBookingById = async (req, res) => {
 // POST make a booking
 exports.makeBooking = async (req, res) => {
     try {
-        const { facility_id, start_time, end_time } = req.body;
+        const { facility_id, start_time, end_time, uid } = req.body;
 
-        if (!facility_id || !start_time || !end_time) {
+        if (!facility_id || !start_time || !end_time || !uid) {
             return res.status(400).json({ error: 'Missing required fields' });
         }
 
+        // Fixed query with proper parentheses
         const conflictCheck = await pool.query(
-            `SELECT * FROM "Bookings" 
+            `SELECT * FROM bookings 
              WHERE facility_id = $1
              AND ((start_time < $3 AND end_time > $2) OR approved IS NULL)`,
             [facility_id, start_time, end_time]
@@ -55,9 +56,9 @@ exports.makeBooking = async (req, res) => {
         }
 
         const result = await pool.query(
-            `INSERT INTO "Bookings" (facility_id, start_time, end_time) 
-             VALUES ($1, $2, $3) RETURNING booking_id`,
-            [facility_id, start_time, end_time]
+            `INSERT INTO bookings (facility_id, start_time, end_time, uid) 
+             VALUES ($1, $2, $3, $4) RETURNING booking_id`,
+            [facility_id, start_time, end_time, uid]
         );
 
         res.status(201).json({
@@ -69,18 +70,17 @@ exports.makeBooking = async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 };
-
 // DELETE booking
 exports.delBooking = async (req, res) => {
     try {
         const { id } = req.params;
 
-        const check = await pool.query('SELECT 1 FROM "Bookings" WHERE booking_id = $1', [id]);
+        const check = await pool.query('SELECT 1 FROM bookings WHERE booking_id = $1', [id]);
         if (check.rows.length === 0) {
             return res.status(404).json({ error: 'Booking not found' });
         }
 
-        await pool.query('DELETE FROM "Bookings" WHERE booking_id = $1', [id]);
+        await pool.query('DELETE FROM bookings WHERE booking_id = $1', [id]);
         res.status(200).json({ message: 'Booking deleted', booking_id: parseInt(id) });
     } catch (err) {
         console.error('PostgreSQL error:', err);
@@ -98,17 +98,17 @@ exports.updateBooking = async (req, res) => {
             return res.status(400).json({ error: 'No fields provided to update' });
         }
 
-        const check = await pool.query('SELECT 1 FROM "Bookings" WHERE booking_id = $1', [id]);
+        const check = await pool.query('SELECT 1 FROM bookings WHERE booking_id = $1', [id]);
         if (check.rows.length === 0) {
             return res.status(404).json({ error: 'Booking not found' });
         }
 
         const keys = Object.keys(updates);
         const values = Object.values(updates);
-        const setClause = keys.map((key, i) => `"${key}" = $${i + 1}`).join(', ');
+        const setClause = keys.map((key, i) => `${key} = $${i + 1}`).join(', ');
 
         await pool.query(
-            `UPDATE "Bookings" SET ${setClause} WHERE booking_id = $${keys.length + 1}`,
+            `UPDATE bookings SET ${setClause} WHERE booking_id = $${keys.length + 1}`,
             [...values, id]
         );
 
@@ -124,18 +124,18 @@ exports.approveBooking = async (req, res) => {
     try {
         const { id } = req.params;
         const booking = await pool.query(
-            'SELECT user_id, start_time, end_time, facility_id FROM "Bookings" WHERE booking_id = $1',
+            'SELECT uid, start_time, end_time, facility_id FROM bookings WHERE booking_id = $1',
             [id]
         );
         if (booking.rows.length === 0) return res.status(404).json({ error: 'Booking not found' });
 
-        const { user_id, start_time, end_time, facility_id } = booking.rows[0];
-        const facility = await pool.query('SELECT name FROM "Facilities" WHERE facility_id = $1', [facility_id]);
+        const { uid, start_time, end_time, facility_id } = booking.rows[0];
+        const facility = await pool.query('SELECT name FROM facilities WHERE facility_id = $1', [facility_id]);
         const facilityName = facility.rows.length ? facility.rows[0].name : 'Unknown Facility';
 
         const message = `Your booking at ${facilityName} from ${new Date(start_time).toLocaleString()} to ${new Date(end_time).toLocaleString()} was approved!`;
-        await pool.query('UPDATE "Bookings" SET approved = TRUE, status = $1 WHERE booking_id = $2', ['approved', id]);
-        await pool.query('INSERT INTO "Notifications" (user_id, message, created_at) VALUES ($1, $2, NOW())', [user_id, message]);
+        await pool.query('UPDATE bookings SET approved = TRUE, status = $1 WHERE booking_id = $2', ['approved', id]);
+        await pool.query('INSERT INTO notifications (uid, message, created_at) VALUES ($1, $2, NOW())', [uid, message]);
 
         res.status(200).json({ message: 'Booking approved and notification sent' });
     } catch (err) {
@@ -149,18 +149,18 @@ exports.rejectBooking = async (req, res) => {
     try {
         const { id } = req.params;
         const booking = await pool.query(
-            'SELECT user_id, start_time, end_time, facility_id FROM "Bookings" WHERE booking_id = $1',
+            'SELECT uid, start_time, end_time, facility_id FROM bookings WHERE booking_id = $1',
             [id]
         );
         if (booking.rows.length === 0) return res.status(404).json({ error: 'Booking not found' });
 
-        const { user_id, start_time, end_time, facility_id } = booking.rows[0];
-        const facility = await pool.query('SELECT name FROM "Facilities" WHERE facility_id = $1', [facility_id]);
+        const { uid, start_time, end_time, facility_id } = booking.rows[0];
+        const facility = await pool.query('SELECT name FROM facilities WHERE facility_id = $1', [facility_id]);
         const facilityName = facility.rows.length ? facility.rows[0].name : 'Unknown Facility';
 
         const message = `Your booking at ${facilityName} from ${new Date(start_time).toLocaleString()} to ${new Date(end_time).toLocaleString()} was rejected.`;
-        await pool.query('UPDATE "Bookings" SET approved = FALSE, status = $1 WHERE booking_id = $2', ['rejected', id]);
-        await pool.query('INSERT INTO "Notifications" (user_id, message, created_at) VALUES ($1, $2, NOW())', [user_id, message]);
+        await pool.query('UPDATE bookings SET approved = FALSE, status = $1 WHERE booking_id = $2', ['rejected', id]);
+        await pool.query('INSERT INTO notifications (uid, message, created_at) VALUES ($1, $2, NOW())', [uid, message]);
 
         res.status(200).json({ message: 'Booking rejected and notification sent' });
     } catch (err) {
@@ -172,23 +172,25 @@ exports.rejectBooking = async (req, res) => {
 // POST handle event participation (approve/reject)
 exports.handleEventParticipation = async (req, res) => {
     const { id } = req.params;
-    const { action, user_id } = req.body;
+    const { action, uid } = req.body;
 
     try {
-        const event = await pool.query('SELECT event_name, max_participants, current_participants FROM "Events" WHERE event_id = $1', [id]);
+        const event = await pool.query('SELECT title, max_p, curr_p FROM events WHERE event_id = $1', [id]);
         if (event.rows.length === 0) return res.status(404).json({ error: 'Event not found' });
 
-        const { event_name, max_participants, current_participants } = event.rows[0];
+        const { title, max_p, curr_p } = event.rows[0];
 
         if (action === 'approve') {
-            if (current_participants >= max_participants) return res.status(400).json({ error: 'Event full' });
+            if (curr_p >= max_p) return res.status(400).json({ error: 'Event full' });
 
-            await pool.query('INSERT INTO "EventParticipants" (user_id, event_id) VALUES ($1, $2)', [user_id, id]);
-            await pool.query('UPDATE "Events" SET current_participants = current_participants + 1 WHERE event_id = $1', [id]);
-            await pool.query('INSERT INTO "Notifications" (user_id, message, created_at) VALUES ($1, $2, NOW())', [user_id, `You have been approved for the event: ${event_name}`]);
+            await pool.query('INSERT INTO event_participants (user_id, event_id) VALUES ($1, $2)', [uid, id]);
+            await pool.query('UPDATE events SET curr_p = curr_p + 1 WHERE event_id = $1', [id]);
+            await pool.query('INSERT INTO notifications (uid, message, created_at, event_id) VALUES ($1, $2, NOW(), $3)', 
+                [uid, `You have been approved for the event: ${title}`, id]);
             res.status(200).json({ message: 'Event participation approved and notification sent' });
         } else if (action === 'reject') {
-            await pool.query('INSERT INTO "Notifications" (user_id, message, created_at) VALUES ($1, $2, NOW())', [user_id, `Your participation in the event ${event_name} was rejected.`]);
+            await pool.query('INSERT INTO notifications (uid, message, created_at, event_id) VALUES ($1, $2, NOW(), $3)', 
+                [uid, `Your participation in the event ${title} was rejected.`, id]);
             res.status(200).json({ message: 'Event participation rejected and notification sent' });
         } else {
             res.status(400).json({ error: 'Invalid action. Use "approve" or "reject".' });

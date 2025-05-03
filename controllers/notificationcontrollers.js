@@ -1,4 +1,4 @@
-const { pool } = require('../db');
+const  pool  = require('../db');
 
 // Get both personal and general notifications for a user
 exports.getNotificationsByUser = async (req, res) => {
@@ -6,8 +6,8 @@ exports.getNotificationsByUser = async (req, res) => {
 
     try {
         const result = await pool.query(
-            `SELECT * FROM "Notifications"
-             WHERE user_id = $1 OR user_id IS NULL
+            `SELECT * FROM "notifications"
+             WHERE uid = $1 OR uid IS NULL
              ORDER BY created_at DESC`,
             [userId]
         );
