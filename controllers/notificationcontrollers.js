@@ -29,7 +29,7 @@ exports.createGeneralAnnouncement = async (req, res) => {
         }
 
         await pool.query(
-            'INSERT INTO "Notifications" (user_id, message, created_at) VALUES (NULL, $1, NOW())',
+            'INSERT INTO "notifications" (message, created_at) VALUES ($1, NOW())',
             [message]
         );
 
