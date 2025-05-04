@@ -43,5 +43,5 @@ describe('Notification API tests (PostgreSQL)', () => {
       expect(res.statusCode).toBe(400);
       expect(res.body.error).toBe('Message is required');
     });
-  });
+  }); 
 });
