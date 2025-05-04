@@ -9,21 +9,6 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: postgres:14
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: testdb
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
       - uses: actions/checkout@v4
 
@@ -35,32 +20,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Debug file structure
-        run: |
-          echo "Current directory structure:"
-          find . -name "*.js" | sort
-          echo "Checking controller file:"
-          ls -la controllers/notificationControllers.js || echo "Controller file not found"
-          echo "Checking routes file:"
-          ls -la routes/notificationRoutes.js || echo "Routes file not found"
-
-      - name: Verify file paths
-        run: |
-          echo "Checking require path resolution:"
-          node -e "
-            const path = require('path');
-            const fullPath = path.resolve(__dirname, 'controllers/notificationControllers.js');
-            console.log('Resolved path:', fullPath);
-            console.log('File exists:', require('fs').existsSync(fullPath));
-          "
-
       - name: Run tests with coverage
         run: npm run test:coverage
-        env:
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432/testdb
-          NODE_ENV: test
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+          token: ${{ secrets.CODECOV_TOKEN }}  # Not required for public repos
