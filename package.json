@@ -13,12 +13,14 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "axios": "^1.9.0",
     "cors": "^2.8.5",
     "csfm-be": "file:",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "mssql": "^11.0.1",
-    "pg": "^8.15.6"
+    "node-cron": "^4.0.5",
+    "pg": "^8.16.0"
   },
   "devDependencies": {
     "jest": "^29.7.0",
