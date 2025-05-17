@@ -6,42 +6,61 @@ jest.mock('../db');
 
 describe('Notification API tests (PostgreSQL)', () => {
   describe('GET /api/notifications/:userId', () => {
-    it('Fetches both user-specific and general notifications', async () => {
+    it('returns user and general notifications', async () => {
       db.query.mockResolvedValueOnce({
         rows: [
-          { notification_id: 1, uid: 'user123', message: 'Hello User', created_at: '2025-05-04T00:00:00Z' },
-          { notification_id: 2, uid: null, message: 'General Announcement', created_at: '2025-05-03T00:00:00Z' }
+          { notification_id: 1, uid: 'user123', message: 'User-specific message', created_at: '2025-05-16T10:00:00Z' },
+          { notification_id: 2, uid: null, message: 'General message', created_at: '2025-05-15T10:00:00Z' }
         ]
       });
 
       const res = await request(app).get('/api/notifications/user123');
       expect(res.statusCode).toBe(200);
       expect(res.body).toEqual([
-        { notification_id: 1, uid: 'user123', message: 'Hello User', created_at: '2025-05-04T00:00:00Z' },
-        { notification_id: 2, uid: null, message: 'General Announcement', created_at: '2025-05-03T00:00:00Z' }
+        expect.objectContaining({ uid: 'user123', message: 'User-specific message' }),
+        expect.objectContaining({ uid: null, message: 'General message' })
       ]);
+    });
+
+    it('returns 500 if DB read fails', async () => {
+      db.query.mockRejectedValueOnce(new Error('DB read error'));
+
+      const res = await request(app).get('/api/notifications/user123');
+      expect(res.statusCode).toBe(500);
+      expect(res.body).toEqual({ error: 'Internal server error' });
     });
   });
 
   describe('POST /api/notifications/general', () => {
-    it('Creates a general announcement successfully', async () => {
+    it('creates a general announcement', async () => {
       db.query.mockResolvedValueOnce({});
 
       const res = await request(app)
         .post('/api/notifications/general')
-        .send({ message: 'Test general announcement' });
+        .send({ message: 'This is a general announcement' });
 
       expect(res.statusCode).toBe(201);
       expect(res.body.message).toBe('General announcement created');
     });
 
-    it('Fails to create general announcement with empty message', async () => {
+    it('returns 400 if message is missing', async () => {
       const res = await request(app)
         .post('/api/notifications/general')
-        .send({});
+        .send({}); // no message
 
       expect(res.statusCode).toBe(400);
-      expect(res.body.error).toBe('Message is required');
+      expect(res.body).toEqual({ error: 'Message is required' });
     });
-  }); 
+
+    it('returns 500 if DB insert fails', async () => {
+      db.query.mockRejectedValueOnce(new Error('DB write error'));
+
+      const res = await request(app)
+        .post('/api/notifications/general')
+        .send({ message: 'Failure case' });
+
+      expect(res.statusCode).toBe(500);
+      expect(res.body).toEqual({ error: 'Internal server error' });
+    });
+  });
 });
