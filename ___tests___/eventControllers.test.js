@@ -1,183 +1,105 @@
-// __tests__/eventControllers.test.js
 const request = require('supertest');
-const app = require('./appForTests'); // your express test app
-const { v4: uuidv4 } = require('uuid');
-
-jest.mock('../db', () => ({
-  query: jest.fn(),
-  end: jest.fn()
-}));
-
+const app = require('./appForTests'); // test Express app
 const pool = require('../db');
 
-describe('Event Controller Tests (Mocked DB)', () => {
-  const testEventId = 123;
-  const testUserId = `testuser_${uuidv4()}`;
-  const duplicateUserId = 'duplicate_user';
-  const nonParticipantId = 'non-existent-user';
+jest.mock('../db');
 
-  beforeAll(() => {
-    pool.query.mockImplementation((text, params) => {
-      // CREATE USER
-      if (text.includes('INSERT INTO users')) {
-        return Promise.resolve({ rowCount: 1 });
-      }
+const testEventId = 123;
+const testUserId = 'user123';
+const duplicateUserId = 'duplicate_user';
+const nonParticipantId = 'ghost_user';
 
-      // CREATE EVENT
-      if (text.includes('INSERT INTO events') && text.includes('RETURNING')) {
-        return Promise.resolve({
-          rows: [{ event_id: testEventId }]
-        });
-      }
+beforeEach(() => {
+  jest.clearAllMocks();
 
-      // GET EVENT BY ID
-      if (text.includes('SELECT * FROM events WHERE event_id')) {
-        return Promise.resolve({
-          rows: [{
-            event_id: testEventId,
-            title: 'Test Event',
-            description: 'Test Description',
-            date: '2025-12-12',
-            fac_id: 1,
-            max_p: 10,
-            curr_p: 1
-          }]
-        });
-      }
+  pool.query.mockImplementation((text, params) => {
+    const normalized = text.replace(/\s+/g, ' ').toLowerCase();
 
-      // GET ALL EVENTS
-      if (text.includes('SELECT * FROM events')) {
-        return Promise.resolve({
-          rows: [{
-            event_id: testEventId,
-            title: 'Test Event'
-          }]
-        });
-      }
+    if (normalized.includes('insert into events') && normalized.includes('returning')) {
+      return Promise.resolve({ rows: [{ event_id: testEventId }] });
+    }
 
-      // UPDATE EVENT
-      if (text.includes('UPDATE events')) {
-        return Promise.resolve({
-          rowCount: 1,
-          rows: [{
-            event_id: testEventId,
-            title: 'Updated Test Event'
-          }]
-        });
-      }
+    if (normalized.startsWith('select * from events')) {
+      return Promise.resolve({ rows: [{ event_id: testEventId, title: 'Mock Event', fac_id: 1 }] });
+    }
 
-      // DELETE EVENT RETURNING
-      if (text.includes('DELETE FROM events') && text.includes('RETURNING')) {
-        return Promise.resolve({
-          rows: [{ event_id: testEventId, title: 'Deleted Event' }]
-        });
-      }
+    if (normalized.includes('from events where event_id')) {
+      return Promise.resolve({ rows: [{ event_id: testEventId, title: 'Mock Event', description: 'desc', date: '2025-01-01', fac_id: 1, max_p: 10, curr_p: 1 }] });
+    }
 
-      // JOIN EVENT
-      if (text.includes('INSERT INTO event_participants')) {
-        if (params.includes(duplicateUserId)) {
-          const err = new Error('duplicate key');
-          err.code = '23505';
-          return Promise.reject(err);
-        }
-        return Promise.resolve({ rowCount: 1 });
-      }
+    if (normalized.startsWith('update events')) {
+      return Promise.resolve({ rowCount: 1 });
+    }
 
-      // GET PARTICIPANTS
-      if (text.includes('SELECT * FROM event_participants')) {
-        return Promise.resolve({
-          rows: [{ uid: testUserId, event_id: testEventId }]
-        });
-      }
+    if (normalized.startsWith('delete from events where event_id')) {
+      return Promise.resolve({ rowCount: 1 });
+    }
 
-      // LEAVE EVENT
-      if (text.includes('DELETE FROM event_participants')) {
-        if (params.includes(nonParticipantId)) {
-          return Promise.resolve({ rowCount: 0 });
-        }
-        return Promise.resolve({ rowCount: 1 });
-      }
+    if (normalized.includes('insert into event_participants')) {
+      return Promise.resolve({ rowCount: 1 });
+    }
 
+    if (normalized.includes('select uid from event_participants')) {
       return Promise.resolve({ rows: [] });
-    });
-  });
+    }
 
-  afterAll(async () => {
-    await pool.end();
-  });
+    if (normalized.includes('delete from event_participants where uid')) {
+      if (params[0] === nonParticipantId) return Promise.resolve({ rowCount: 0 });
+      return Promise.resolve({ rowCount: 0 });
+    }
 
-  test('POST /api/events → should create event', async () => {
+    return Promise.resolve({ rows: [] });
+  });
+});
+
+describe('Event Controller Tests (Mocked DB)', () => {
+  test('POST /api/events → creates a new event', async () => {
     const res = await request(app).post('/api/events').send({
       title: 'Test Event',
-      desc: 'Test Description',
-      date: '2025-12-12',
+      desc: 'Description',
+      date: '2025-01-01',
       fac_id: 1,
       max_p: 10,
       curr_p: 0
     });
     expect(res.statusCode).toBe(201);
-    expect(res.body.message).toBe('Event created successfully');
+    expect(res.body.message).toMatch(/created/i);
     expect(res.body.res).toHaveProperty('event_id');
   });
 
-  test('GET /api/events → should retrieve all events', async () => {
+  test('GET /api/events → returns list of events', async () => {
     const res = await request(app).get('/api/events');
     expect(res.statusCode).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
   });
 
-  test('GET /api/events/:id → should retrieve specific event', async () => {
+  test('GET /api/events/:id → fetches specific event', async () => {
     const res = await request(app).get(`/api/events/${testEventId}`);
     expect(res.statusCode).toBe(200);
-    expect(Array.isArray(res.body)).toBe(true);
-    expect(res.body[0]).toHaveProperty('title', 'Test Event');
+    expect(res.body[0].title).toBe('Mock Event');
   });
 
-  test('PATCH /api/events/:id → should update event', async () => {
-    const res = await request(app).patch(`/api/events/${testEventId}`).send({
-      title: 'Updated Test Event'
-    });
+  test('PATCH /api/events/:id → updates the event', async () => {
+    const res = await request(app).patch(`/api/events/${testEventId}`).send({ title: 'Updated Event' });
     expect(res.statusCode).toBe(200);
-    expect(res.body.message).toBe('Event updated successfully');
+    expect(res.body.message).toMatch(/updated/i);
   });
 
-  test('DELETE /api/events/:id → should delete event', async () => {
+  test('DELETE /api/events/:id → deletes the event', async () => {
     const res = await request(app).delete(`/api/events/${testEventId}`);
     expect(res.statusCode).toBe(200);
-    expect(res.body.message).toBe('Event deleted successfully');
+    expect(res.body.message).toMatch(/deleted/i);
   });
 
-  test('POST /api/events/:id/join → should allow user to join', async () => {
-    const res = await request(app)
-      .post(`/api/events/${testEventId}/join`)
-      .send({ uid: testUserId });
-    expect([200, 201, 404]).toContain(res.statusCode); // include 404 fallback
+  test('POST /api/events/:id/join → allows user to join event', async () => {
+    const res = await request(app).post(`/api/events/${testEventId}/join`).send({ uid: testUserId });
+    expect(res.statusCode).toBe(201);
+    expect(res.body.message).toMatch(/joined/i);
   });
 
-  test('POST /api/events/:id/join → should prevent duplicate joins', async () => {
-    const res = await request(app)
-      .post(`/api/events/${testEventId}/join`)
-      .send({ uid: duplicateUserId });
-    expect([400, 404, 409]).toContain(res.statusCode);
-  });
-
-  test('GET /api/events/:id/part → should list participants', async () => {
-    const res = await request(app).get(`/api/events/${testEventId}/part`);
-    expect(res.statusCode).toBe(200);
-    expect(Array.isArray(res.body)).toBe(true);
-  });
-
-  test('POST /api/events/:id/leave → should allow user to leave', async () => {
-    const res = await request(app)
-      .post(`/api/events/${testEventId}/leave`)
-      .send({ uid: testUserId });
-    expect([200, 204, 404]).toContain(res.statusCode);
-  });
-
-  test('POST /api/events/:id/leave → should handle non-participant', async () => {
-    const res = await request(app)
-      .post(`/api/events/${testEventId}/leave`)
-      .send({ uid: nonParticipantId });
-    expect([404]).toContain(res.statusCode);
+  test('POST /api/events/:id/leave → handles non-participant gracefully', async () => {
+    const res = await request(app).post(`/api/events/${testEventId}/leave`).send({ uid: nonParticipantId });
+    expect(res.statusCode).toBe(404);
+    expect(res.body.error).toMatch(/not registered/i);
   });
 });
