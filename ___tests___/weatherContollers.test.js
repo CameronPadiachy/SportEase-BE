@@ -3,7 +3,7 @@ const db = require('../db');
 const {
   getWeatherForAllFacilities,
   checkWeatherForAllFacilities
-} = require('../controllers/weatherControllers'); // ✅ Correct path
+} = require('../controllers/weatherControllers'); // 
 
 jest.mock('axios');
 jest.mock('../db');
