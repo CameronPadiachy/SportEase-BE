@@ -16,13 +16,13 @@ exports.checkWeatherForAllFacilities = async () => {
     `);
 
     for (const { facility_id, name, latitude, longitude } of facilities) {
-      const url = https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${API_KEY}&units=metric;
+      const url = `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${API_KEY}&units=metric`;
       const resp = await axios.get(url);
       const data = resp.data;
 
       const description = data.weather[0].description;
       const temp = Math.round(data.main.temp);
-      const summary = Today's weather at ${name}: ${description}, ${temp}°C;
+      const summary = `Today's weather at ${name}: ${description}, ${temp}°C`;
 
       const { rows: existing } = await pool.query(
         `SELECT * FROM "notifications"
@@ -57,7 +57,7 @@ exports.getWeatherForAllFacilities = async (req, res) => {
     const results = {}; // ✅ Define the results object
 
     for (const { name, latitude, longitude } of facilities) {
-      const url = https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${API_KEY}&units=metric;
+      const url = `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${API_KEY}&units=metric`;
       const resp = await axios.get(url);
       const description = resp.data.weather[0].description;
       const temp = Math.round(resp.data.main.temp);

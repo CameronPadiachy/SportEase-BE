@@ -1,0 +1,8 @@
+# .artifactignore
+*
+!dist/
+!build/
+!node_modules/
+!package*.json
+!.env
+!server.js  # or your main entry file

@@ -1,4 +1,21 @@
-name: Build and deploy to Azure Web App
+# This workflow will build and push a node.js application to an Azure Web App when a commit is pushed to your default branch.
+#
+# This workflow assumes you have already created the target Azure App Service web app.
+# For instructions see https://docs.microsoft.com/en-us/azure/app-service/quickstart-nodejs?tabs=linux&pivots=development-environment-cli
+#
+# To configure this workflow:
+#
+# 1. Download the Publish Profile for your Azure Web App. You can download this file from the Overview page of your Web App in the Azure Portal.
+#    For more information: https://docs.microsoft.com/en-us/azure/app-service/deploy-github-actions?tabs=applevel#generate-deployment-credentials
+#
+# 2. Create a secret in your repository named AZURE_WEBAPP_PUBLISH_PROFILE, paste the publish profile contents as the value of the secret.
+#    For instructions on obtaining the publish profile see: https://docs.microsoft.com/azure/app-service/deploy-github-actions#configure-the-github-secret
+#
+# 3. Change the value for the AZURE_WEBAPP_NAME. Optionally, change the AZURE_WEBAPP_PACKAGE_PATH and NODE_VERSION environment variables below.
+#
+# For more information on GitHub Actions for Azure: https://github.com/Azure/Actions
+# For more information on the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# For more samples to get started with GitHub Action workflows to deploy to Azure: https://github.com/Azure/actions-workflow-samples
 
 on:
   push:
@@ -6,9 +23,9 @@ on:
   workflow_dispatch:
 
 env:
-  AZURE_WEBAPP_NAME: SportEaseBE
-  AZURE_WEBAPP_PACKAGE_PATH: '.'
-  NODE_VERSION: '22.x'
+  AZURE_WEBAPP_NAME: SportEaseBE    # set this to your application's name
+  AZURE_WEBAPP_PACKAGE_PATH: '.'      # set this to the path to your web app project, defaults to the repository root
+  NODE_VERSION: '22.x'                # set this to the node version to use
 
 permissions:
   contents: read
@@ -35,24 +52,6 @@ jobs:
       with:
         name: node-app
         path: .
-
-    # Add the artifact cleanup step here
-    - name: Clean up old artifacts
-      if: always()  # Run even if previous steps fail
-      env:
-        GITHUB_TOKEN: ${{ github.token }}
-      run: |
-        # Install GitHub CLI if not present
-        if ! command -v gh &> /dev/null; then
-          echo "Installing GitHub CLI..."
-          sudo apt-get update && sudo apt-get install -y gh
-          gh auth login --with-token <<< "$GITHUB_TOKEN"
-        fi
-        
-        echo "Cleaning up old artifacts..."
-        gh api repos/${{ github.repository }}/actions/artifacts \
-          --jq '.artifacts[] | select(.expired == false) | .id' | \
-          xargs -I{} gh api repos/${{ github.repository }}/actions/artifacts/{} -X DELETE
 
   deploy:
     permissions:
