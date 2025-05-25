@@ -40,9 +40,9 @@ exports.checkWeatherForAllFacilities = async () => {
       }
     }
 
-    console.log('✅ Weather notifications inserted.');
+    console.log('Weather notifications inserted.');
   } catch (err) {
-    console.error('❌ Error in checkWeatherForAllFacilities:', err);
+    console.error(' Error in checkWeatherForAllFacilities:', err);
   }
 };
 
@@ -54,7 +54,7 @@ exports.getWeatherForAllFacilities = async (req, res) => {
       WHERE latitude IS NOT NULL AND longitude IS NOT NULL
     `);
 
-    const results = {}; // ✅ Define the results object
+    const results = {}; //  Define the results object
 
     for (const { name, latitude, longitude } of facilities) {
       const url = `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${API_KEY}&units=metric`;
@@ -67,7 +67,7 @@ exports.getWeatherForAllFacilities = async (req, res) => {
 
     res.json(results);
   } catch (err) {
-    console.error('❌ Error in getWeatherForAllFacilities:', err);
+    console.error(' Error in getWeatherForAllFacilities:', err);
     res.status(500).json({ error: 'Failed to fetch weather' });
   }
 };
