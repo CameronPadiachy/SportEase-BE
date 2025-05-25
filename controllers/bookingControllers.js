@@ -125,7 +125,7 @@ exports.approveBooking = async (req, res) => {
     const { id } = req.params;
 
     const booking = await pool.query(
-      'SELECT uid, start_time, end_time, facility_id FROM bookings WHERE booking_id = $1',
+      'SELECT uid, start_time, facility_id FROM bookings WHERE booking_id = $1',
       [id]
     );
     if (booking.rows.length === 0) return res.status(404).json({ error: 'Booking not found' });
@@ -138,12 +138,13 @@ exports.approveBooking = async (req, res) => {
     );
     const facilityName = facility.rows.length ? facility.rows[0].name : 'Unknown Facility';
 
-    // 🕒 Add 2-hour shift to compensate for browser timezone offset
+    // Convert UTC time to local time (+2 hours for South Africa)
     const localStart = new Date(start_time);
     localStart.setUTCHours(localStart.getUTCHours() + 2);
-    const timeStr = localStart.toISOString().substring(11, 16); // "HH:MM"
+    const dateStr = localStart.toISOString().substring(0, 10); // YYYY-MM-DD
+    const timeStr = localStart.toISOString().substring(11, 16); // HH:MM
 
-    const message = `Your booking at ${facilityName} is confirmed for ${timeStr}`;
+    const message = `Your booking at ${facilityName} is confirmed for ${dateStr} at ${timeStr}`;
 
     await pool.query(
       'UPDATE bookings SET approved = TRUE, status = $1 WHERE booking_id = $2',
@@ -161,14 +162,13 @@ exports.approveBooking = async (req, res) => {
   }
 };
 
-
 // PUT reject booking
 exports.rejectBooking = async (req, res) => {
   try {
     const { id } = req.params;
 
     const booking = await pool.query(
-      'SELECT uid, start_time, end_time, facility_id FROM bookings WHERE booking_id = $1',
+      'SELECT uid, start_time, facility_id FROM bookings WHERE booking_id = $1',
       [id]
     );
     if (booking.rows.length === 0) return res.status(404).json({ error: 'Booking not found' });
@@ -181,12 +181,12 @@ exports.rejectBooking = async (req, res) => {
     );
     const facilityName = facility.rows.length ? facility.rows[0].name : 'Unknown Facility';
 
-    //  Add 2-hour shift to match approveBooking logic
     const localStart = new Date(start_time);
     localStart.setUTCHours(localStart.getUTCHours() + 2);
-    const timeStr = localStart.toISOString().substring(11, 16);
+    const dateStr = localStart.toISOString().substring(0, 10); // YYYY-MM-DD
+    const timeStr = localStart.toISOString().substring(11, 16); // HH:MM
 
-    const message = `Your booking at ${facilityName} for ${timeStr} was rejected.`;
+    const message = `Your booking at ${facilityName} on ${dateStr} at ${timeStr} was rejected.`;
 
     await pool.query(
       'UPDATE bookings SET approved = FALSE, status = $1 WHERE booking_id = $2',
