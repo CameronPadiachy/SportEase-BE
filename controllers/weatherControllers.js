@@ -40,9 +40,9 @@ exports.checkWeatherForAllFacilities = async () => {
       }
     }
 
-    console.log('✅ Weather notifications inserted.');
+    console.log('Weather notifications inserted.');
   } catch (err) {
-    console.error('❌ Error in checkWeatherForAllFacilities:', err);
+    console.error(' Error in checkWeatherForAllFacilities:', err);
   }
 };
 
@@ -67,7 +67,7 @@ exports.getWeatherForAllFacilities = async (req, res) => {
 
     res.json(results);
   } catch (err) {
-    console.error('❌ Error in getWeatherForAllFacilities:', err);
+    console.error(' Error in getWeatherForAllFacilities:', err);
     res.status(500).json({ error: 'Failed to fetch weather' });
   }
 };
