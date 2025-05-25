@@ -54,7 +54,7 @@ exports.getWeatherForAllFacilities = async (req, res) => {
       WHERE latitude IS NOT NULL AND longitude IS NOT NULL
     `);
 
-    const results = {}; // ✅ Define the results object
+    const results = {}; //  Define the results object
 
     for (const { name, latitude, longitude } of facilities) {
       const url = `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${API_KEY}&units=metric`;
