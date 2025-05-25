@@ -121,53 +121,89 @@ exports.updateBooking = async (req, res) => {
 
 // PUT approve booking
 exports.approveBooking = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const booking = await pool.query(
-            'SELECT uid, start_time, end_time, facility_id FROM bookings WHERE booking_id = $1',
-            [id]
-        );
-        if (booking.rows.length === 0) return res.status(404).json({ error: 'Booking not found' });
+  try {
+    const { id } = req.params;
 
-        const { uid, start_time, end_time, facility_id } = booking.rows[0];
-        const facility = await pool.query('SELECT name FROM facilities WHERE facility_id = $1', [facility_id]);
-        const facilityName = facility.rows.length ? facility.rows[0].name : 'Unknown Facility';
+    const booking = await pool.query(
+      'SELECT uid, start_time, end_time, facility_id FROM bookings WHERE booking_id = $1',
+      [id]
+    );
+    if (booking.rows.length === 0) return res.status(404).json({ error: 'Booking not found' });
 
-        const message = `Your booking at ${facilityName} from ${new Date(start_time).toLocaleString()} to ${new Date(end_time).toLocaleString()} was approved!`;
-        await pool.query('UPDATE bookings SET approved = TRUE, status = $1 WHERE booking_id = $2', ['approved', id]);
-        await pool.query('INSERT INTO notifications (uid, message, created_at) VALUES ($1, $2, NOW())', [uid, message]);
+    const { uid, start_time, facility_id } = booking.rows[0];
 
-        res.status(200).json({ message: 'Booking approved and notification sent' });
-    } catch (err) {
-        console.error('PostgreSQL error:', err);
-        res.status(500).json({ error: 'Internal server error' });
-    }
+    const facility = await pool.query(
+      'SELECT name FROM facilities WHERE facility_id = $1',
+      [facility_id]
+    );
+    const facilityName = facility.rows.length ? facility.rows[0].name : 'Unknown Facility';
+
+    // 🕒 Add 2-hour shift to compensate for browser timezone offset
+    const localStart = new Date(start_time);
+    localStart.setUTCHours(localStart.getUTCHours() + 2);
+    const timeStr = localStart.toISOString().substring(11, 16); // "HH:MM"
+
+    const message = `Your booking at ${facilityName} is confirmed for ${timeStr}`;
+
+    await pool.query(
+      'UPDATE bookings SET approved = TRUE, status = $1 WHERE booking_id = $2',
+      ['approved', id]
+    );
+    await pool.query(
+      'INSERT INTO notifications (uid, message, created_at) VALUES ($1, $2, NOW())',
+      [uid, message]
+    );
+
+    res.status(200).json({ message: 'Booking approved and notification sent' });
+  } catch (err) {
+    console.error('PostgreSQL error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 };
+
 
 // PUT reject booking
 exports.rejectBooking = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const booking = await pool.query(
-            'SELECT uid, start_time, end_time, facility_id FROM bookings WHERE booking_id = $1',
-            [id]
-        );
-        if (booking.rows.length === 0) return res.status(404).json({ error: 'Booking not found' });
+  try {
+    const { id } = req.params;
 
-        const { uid, start_time, end_time, facility_id } = booking.rows[0];
-        const facility = await pool.query('SELECT name FROM facilities WHERE facility_id = $1', [facility_id]);
-        const facilityName = facility.rows.length ? facility.rows[0].name : 'Unknown Facility';
+    const booking = await pool.query(
+      'SELECT uid, start_time, end_time, facility_id FROM bookings WHERE booking_id = $1',
+      [id]
+    );
+    if (booking.rows.length === 0) return res.status(404).json({ error: 'Booking not found' });
 
-        const message = `Your booking at ${facilityName} from ${new Date(start_time).toLocaleString()} to ${new Date(end_time).toLocaleString()} was rejected.`;
-        await pool.query('UPDATE bookings SET approved = FALSE, status = $1 WHERE booking_id = $2', ['rejected', id]);
-        await pool.query('INSERT INTO notifications (uid, message, created_at) VALUES ($1, $2, NOW())', [uid, message]);
+    const { uid, start_time, facility_id } = booking.rows[0];
 
-        res.status(200).json({ message: 'Booking rejected and notification sent' });
-    } catch (err) {
-        console.error('PostgreSQL error:', err);
-        res.status(500).json({ error: 'Internal server error' });
-    }
+    const facility = await pool.query(
+      'SELECT name FROM facilities WHERE facility_id = $1',
+      [facility_id]
+    );
+    const facilityName = facility.rows.length ? facility.rows[0].name : 'Unknown Facility';
+
+    //  Add 2-hour shift to match approveBooking logic
+    const localStart = new Date(start_time);
+    localStart.setUTCHours(localStart.getUTCHours() + 2);
+    const timeStr = localStart.toISOString().substring(11, 16);
+
+    const message = `Your booking at ${facilityName} for ${timeStr} was rejected.`;
+
+    await pool.query(
+      'UPDATE bookings SET approved = FALSE, status = $1 WHERE booking_id = $2',
+      ['rejected', id]
+    );
+    await pool.query(
+      'INSERT INTO notifications (uid, message, created_at) VALUES ($1, $2, NOW())',
+      [uid, message]
+    );
+
+    res.status(200).json({ message: 'Booking rejected and notification sent' });
+  } catch (err) {
+    console.error('PostgreSQL error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 };
+
 
 // POST handle event participation (approve/reject)
 exports.handleEventParticipation = async (req, res) => {
